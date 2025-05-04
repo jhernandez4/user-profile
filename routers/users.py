@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 from ..dependencies import get_current_user, get_session, get_password_hash
@@ -26,7 +26,7 @@ async def read_user_me(
 
 @router.post("", response_model=UserPublic)
 async def register_new_user(
-    request: UserCreate,
+    request: Annotated[UserCreate, Form()],
     session: SessionDep 
 ):
     existing_user_by_username = session.exec(
