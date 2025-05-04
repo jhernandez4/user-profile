@@ -10,7 +10,7 @@ load_dotenv()
 
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    uername: str = Field(unique=True, index=True)
+    username: str = Field(unique=True, index=True)
     password: str 
     email: EmailStr = Field(unique=True)
     first_name: str 
