@@ -24,7 +24,7 @@ CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
-@router.get("/me", response_model=UserCreate)
+@router.get("/me", response_model=UserPublic)
 async def read_user_me(
     current_user: CurrentUserDep
 ):
