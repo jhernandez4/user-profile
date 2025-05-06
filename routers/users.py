@@ -43,7 +43,7 @@ async def register_new_user(
     if existing_user_by_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create user. User with username '{request.username}' already exists"
+            detail=f"User with username '{request.username}' already exists."
         )
 
     existing_user_by_email = session.exec(
@@ -54,7 +54,7 @@ async def register_new_user(
     if existing_user_by_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create user. {request.email} is already in use"
+            detail=f"{request.email} is already in use."
         )
 
     hashed_password = get_password_hash(request.password)
