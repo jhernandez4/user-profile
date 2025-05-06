@@ -33,4 +33,4 @@ class UserUpdate(UserBase):
     birthday: datetime | None = None
     biography: str | None = None
     favorite_number: int | None = None
-    profile_picture: str | None = None
+    profile_picture: UploadFile | None = None
