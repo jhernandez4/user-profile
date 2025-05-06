@@ -51,12 +51,6 @@ def get_user(username: str):
             .where(User.username == username)
         ).first()
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with username {username} does not exist"
-        )
-    
     return user
 
 def authenticate_user(username: str, password: str):
@@ -66,6 +60,7 @@ def authenticate_user(username: str, password: str):
         return False
     if not verify_password(password, user.password):
         return False
+
     return user
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -99,5 +94,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         raise credentials_exception
     
     user = get_user(username=token_data.username)
+    if user is None:
+        raise credentials_exception
 
     return user
