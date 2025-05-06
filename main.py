@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from .database import create_db_and_tables
-from .routers import users
+from .routers import users, token
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(users.router)
+app.include_router(token.router)
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
 
