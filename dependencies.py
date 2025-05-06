@@ -44,11 +44,12 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def get_user(username: str, session: Annotated[Session, Depends(get_session)]):
-    user = session.exec(
-        select(User)
-        .where(User.username == username)
-    ).first()
+def get_user(username: str):
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.username == username)
+        ).first()
 
     if not user:
         raise HTTPException(
