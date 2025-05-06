@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 from ..dependencies import get_current_user, get_session, get_password_hash
 from ..database import User
-from ..models.users import UserCreate, UserPublic
+from ..models.users import UserCreate, UserPublic, UserUpdate
 from pathvalidate import sanitize_filename
 import os
 import shutil
@@ -13,7 +13,7 @@ import shutil
 router = APIRouter(
     prefix="/users",
     # For FastAPI auto documentation
-    tags=["users"]
+    tags=["users"],
 )
 
 UPLOAD_DIR = "images"
@@ -30,6 +30,65 @@ async def read_user_me(
 ):
     return current_user
 
+@router.patch("/me", response_model=UserPublic)
+async def edit_user_me(
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    request: Annotated[UserUpdate, Form()]
+):
+    edit_user_data = request.model_dump(exclude_unset=True)
+    
+    # Check if username is already taken
+    if "username" in edit_user_data:
+        existing_user = session.exec(
+            select(User)
+            .where(User.username == edit_user_data["username"])
+        ).first()
+
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"User with username '{edit_user_data["username"]} already exists.'"
+            )
+
+    # Check if email is already in use
+    if "email" in edit_user_data:
+        existing_user = session.exec(
+            select(User)
+            .where(User.email == edit_user_data["email"])
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"${edit_user_data["email"]} is already in use"
+            )
+
+    # Check if profile picture is being updated
+    if "profile_picture" in edit_user_data and current_user.profile_picture:
+        # Extract filename from stored path
+        old_file_path = current_user.profile_picture.lstrip("/")  # remove leading slash
+        full_path = os.path.join(os.getcwd(), old_file_path)
+
+        # Delete the old profile picture file if it exists
+        if os.path.exists(full_path):
+            os.remove(full_path)
+
+        sanitized_filename = sanitize_filename(edit_user_data["profile_picture"].filename) 
+        file_path = os.path.join(UPLOAD_DIR, sanitized_filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(edit_user_data["profile_picture"].file, buffer)
+
+        edit_user_data["profile_picture"] = f"/images/{sanitized_filename}"
+
+    current_user.sqlmodel_update(edit_user_data)
+
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+
+    return current_user
+    
 @router.post("", response_model=UserPublic)
 async def register_new_user(
     session: SessionDep,
