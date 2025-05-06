@@ -25,12 +25,12 @@ class UserCreate(UserBase):
 
 # Edit request model
 class UserUpdate(UserBase):
-    username: str | None = None
-    password: str | None = None
+    username: str | None = Field(default=None, min_length=1, max_length=30) 
+    password: str | None = Field(default=None, min_length=1)
     email: EmailStr | None = None
-    first_name: str  | None = None
-    last_name: str  | None = None
+    first_name: str  | None = Field(default=None, min_length=1)
+    last_name: str  | None = Field(default=None, min_length=1)
     birthday: datetime | None = None
-    biography: str | None = None
+    biography: str | None = Field(default=None, max_length=255)
     favorite_number: int | None = None
     profile_picture: UploadFile | None = None
