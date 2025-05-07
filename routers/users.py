@@ -3,7 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
-from ..dependencies import get_current_user, get_session, get_password_hash
+from ..dependencies import (
+    get_current_user, get_session, get_password_hash, validate_non_empty_string 
+)
 from ..database import User
 from ..models.users import UserCreate, UserPublic, UserUpdate
 from pathvalidate import sanitize_filename
@@ -40,19 +42,23 @@ async def edit_user_me(
     
     # Check if username is already taken
     if "username" in edit_user_data:
+        stripped_username = validate_non_empty_string("Username", edit_user_data["username"])
         existing_user = session.exec(
             select(User)
-            .where(User.username == edit_user_data["username"])
+            .where(User.username == stripped_username)
         ).first()
 
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User with username '{edit_user_data["username"]} already exists.'"
+                detail=f"The username '{stripped_username}' is already taken."
             )
+
+        edit_user_data["username"] = stripped_username
 
     # Check if email is already in use
     if "email" in edit_user_data:
+        stripped_email = validate_non_empty_string("Email", edit_user_data["email"])
         existing_user = session.exec(
             select(User)
             .where(User.email == edit_user_data["email"])
@@ -60,8 +66,13 @@ async def edit_user_me(
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"${edit_user_data["email"]} is already in use"
+                detail=f"{edit_user_data["email"]} is already in use"
             )
+        edit_user_data["email"] = stripped_email
+
+    if "password" in edit_user_data:
+        hashed_password = get_password_hash(edit_user_data["password"])
+        edit_user_data["password"] = hashed_password 
 
     # Check if profile picture is being updated
     if "profile_picture" in edit_user_data and current_user.profile_picture:
@@ -94,31 +105,36 @@ async def register_new_user(
     session: SessionDep,
     request: Annotated[UserCreate, Form()],
 ):
+    stripped_username = validate_non_empty_string("Username", request.username) 
     existing_user_by_username = session.exec(
         select(User)
-        .where(User.username == request.username)
+        .where(User.username == stripped_username)
     ).first()
 
     if existing_user_by_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User with username '{request.username}' already exists."
+            detail=f"The username '{stripped_username}' is already taken."
         )
 
+    stripped_email = validate_non_empty_string("Email", request.email)
     existing_user_by_email = session.exec(
         select(User)
-        .where(User.email == request.email)
+        .where(User.email == stripped_email)
     ).first()
 
     if existing_user_by_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"{request.email} is already in use."
+            detail=f"{stripped_email} is already in use."
         )
 
     hashed_password = get_password_hash(request.password)
+
     user_data = request.model_dump()
     user_data["password"] = hashed_password
+    user_data["username"] = stripped_username
+    user_data["email"] = stripped_email
 
     if request.profile_picture:
         sanitized_filename = sanitize_filename(request.profile_picture.filename) 

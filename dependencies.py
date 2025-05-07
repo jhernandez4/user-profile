@@ -20,6 +20,17 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+def validate_non_empty_string(field_name: str, field_value: str):
+    stripped_field = field_value.strip()
+
+    if stripped_field == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} cannot be empty"
+        )
+    
+    return stripped_field
+
 #### JWT Token Setup ####
 # to get a string like this run:
 # openssl rand -hex 32
