@@ -21,7 +21,7 @@ class UserPublic(UserBase):
 # Create request model
 class UserCreate(UserBase):
     password: str= Field(min_length=1)
-    profile_picture: UploadFile | None = None,
+    profile_picture: UploadFile | None = None
 
 # Edit request model
 class UserUpdate(UserBase):
