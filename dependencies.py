@@ -1,7 +1,7 @@
 from .database import engine, User
 from sqlmodel import Session
 from typing import Annotated
-from fastapi import Depends
+from fastapi import Depends, UploadFile
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 import jwt
@@ -30,6 +30,13 @@ def validate_non_empty_string(field_name: str, field_value: str):
         )
     
     return stripped_field
+
+def is_jpeg(file: UploadFile) -> bool:
+    # Check the file extension 
+    if not (file.filename.endswith(".jpg") or file.filename.endswith(".jpeg")):
+        return False
+    
+    return True
 
 #### JWT Token Setup ####
 # to get a string like this run:

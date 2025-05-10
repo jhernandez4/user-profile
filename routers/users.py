@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 from ..dependencies import (
-    get_current_user, get_session, get_password_hash, validate_non_empty_string 
+    get_current_user, get_session, get_password_hash, validate_non_empty_string,
+    is_jpeg 
 )
 from ..database import User
 from ..models.users import UserCreate, UserPublic, UserUpdate
@@ -76,6 +77,14 @@ async def edit_user_me(
 
     # Check if profile picture is being updated
     if "profile_picture" in edit_user_data and current_user.profile_picture:
+        profile_picture = edit_user_data["profile_picture"]
+
+        if not is_jpeg(profile_picture):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Profile picture must be a JPG or JPEG image"
+            )
+
         # Extract filename from stored path
         old_file_path = current_user.profile_picture.lstrip("/")  # remove leading slash
         full_path = os.path.join(os.getcwd(), old_file_path)
@@ -84,11 +93,11 @@ async def edit_user_me(
         if os.path.exists(full_path):
             os.remove(full_path)
 
-        sanitized_filename = sanitize_filename(edit_user_data["profile_picture"].filename) 
+        sanitized_filename = sanitize_filename(profile_picture.filename) 
         file_path = os.path.join(UPLOAD_DIR, sanitized_filename)
 
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(edit_user_data["profile_picture"].file, buffer)
+            shutil.copyfileobj(profile_picture.file, buffer)
 
         edit_user_data["profile_picture"] = f"/images/{sanitized_filename}"
 
@@ -137,7 +146,15 @@ async def register_new_user(
     user_data["email"] = stripped_email
 
     if request.profile_picture:
-        sanitized_filename = sanitize_filename(request.profile_picture.filename) 
+        profile_picture = request.profile_picture
+
+        if not is_jpeg(profile_picture):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Profile picture must be a JPG or JPEG image."
+            )
+
+        sanitized_filename = sanitize_filename(profile_picture.filename) 
         file_path = os.path.join(UPLOAD_DIR, sanitized_filename)
 
         with open(file_path, "wb") as buffer:
